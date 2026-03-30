@@ -1,106 +1,49 @@
-name: mod-builds
+name: Build Geode Mod
 
 on:
   push:
+    branches: ["main"]
   pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
-  android64:
+  build-android:
+    name: Build Android
     runs-on: ubuntu-latest
+
     steps:
-      - name: get repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: install python
-        uses: actions/setup-python@v5
+      - name: Build Geode mod for Android
+        id: build-android
+        uses: geode-sdk/build-geode-mod@main
         with:
-          python-version: "3.11"
+          target: "Android64"
 
-      - name: install geode cli
-        run: pip install geode
-
-      - name: setup geode sdk
-        run: |
-          geode sdk install 5.4.1
-          geode sdk use 5.4.1
-          geode sdk install-binaries android64
-
-      - name: generate files
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DGEODE_TARGET_PLATFORM=Android64
-
-      - name: compile
-        run: cmake --build build --config Release
-
-      - name: upload android64
+      - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
-          name: screentime-android64
-          path: build/**/*.geode
+          name: screen-time-android64
+          path: ${{ steps.build-android.outputs.build-output }}
 
-  android32:
-    runs-on: ubuntu-latest
-    steps:
-      - name: get repo
-        uses: actions/checkout@v4
-
-      - name: install python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: install geode cli
-        run: pip install geode
-
-      - name: setup geode sdk
-        run: |
-          geode sdk install 5.4.1
-          geode sdk use 5.4.1
-          geode sdk install-binaries android32
-
-      - name: generate files
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DGEODE_TARGET_PLATFORM=Android32
-
-      - name: compile
-        run: cmake --build build --config Release
-
-      - name: upload android32
-        uses: actions/upload-artifact@v4
-        with:
-          name: screentime-android32
-          path: build/**/*.geode
-
-  windows:
+  build-windows:
+    name: Build Windows
     runs-on: windows-latest
+
     steps:
-      - name: get repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: install python
-        uses: actions/setup-python@v5
+      - name: Build Geode mod for Windows
+        id: build-win
+        uses: geode-sdk/build-geode-mod@main
         with:
-          python-version: "3.11"
+          target: "Win32"
 
-      - name: install geode cli
-        run: pip install geode
-
-      - name: setup geode sdk
-        shell: bash
-        run: |
-          geode sdk install 5.4.1
-          geode sdk use 5.4.1
-          geode sdk install-binaries win
-
-      - name: generate files
-        shell: bash
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DGEODE_TARGET_PLATFORM=Win32
-
-      - name: compile
-        shell: bash
-        run: cmake --build build --config Release
-
-      - name: upload windows
+      - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: screentime-windows
-          path: build/**/*.geode
+          name: screen-time-win32
+          path: ${{ steps.build-win.outputs.build-output }}
