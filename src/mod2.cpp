@@ -1,6 +1,5 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-
 using namespace geode::prelude;
 
 static int64_t s_sessionStart = 0;
