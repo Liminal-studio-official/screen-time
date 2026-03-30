@@ -12,27 +12,27 @@ jobs:
       - name: get repo
         uses: actions/checkout@v4
 
-      - name: setup geode cli
-        run: |
-          git clone --recursive https://github.com/geode-sdk/cli.git geode-cli
-          cd geode-cli
-          chmod +x install.sh
-          ./install.sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: install python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: setup sdk
+      - name: install geode cli
+        run: pip install geode
+
+      - name: setup geode sdk
         run: |
           geode sdk install 5.4.1
           geode sdk use 5.4.1
           geode sdk install-binaries android64
 
-      - name: generate project files
+      - name: generate files
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DGEODE_TARGET_PLATFORM=Android64
 
-      - name: compile mod
+      - name: compile
         run: cmake --build build --config Release
 
-      - name: save android64 build
+      - name: upload android64
         uses: actions/upload-artifact@v4
         with:
           name: screentime-android64
@@ -44,27 +44,27 @@ jobs:
       - name: get repo
         uses: actions/checkout@v4
 
-      - name: setup geode cli
-        run: |
-          git clone --recursive https://github.com/geode-sdk/cli.git geode-cli
-          cd geode-cli
-          chmod +x install.sh
-          ./install.sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: install python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: setup sdk
+      - name: install geode cli
+        run: pip install geode
+
+      - name: setup geode sdk
         run: |
           geode sdk install 5.4.1
           geode sdk use 5.4.1
           geode sdk install-binaries android32
 
-      - name: generate project files
+      - name: generate files
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DGEODE_TARGET_PLATFORM=Android32
 
-      - name: compile mod
+      - name: compile
         run: cmake --build build --config Release
 
-      - name: save android32 build
+      - name: upload android32
         uses: actions/upload-artifact@v4
         with:
           name: screentime-android32
@@ -76,30 +76,30 @@ jobs:
       - name: get repo
         uses: actions/checkout@v4
 
-      - name: setup geode cli
-        shell: bash
-        run: |
-          git clone --recursive https://github.com/geode-sdk/cli.git geode-cli
-          cd geode-cli
-          ./install.sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: install python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: setup sdk
+      - name: install geode cli
+        run: pip install geode
+
+      - name: setup geode sdk
         shell: bash
         run: |
           geode sdk install 5.4.1
           geode sdk use 5.4.1
           geode sdk install-binaries win
 
-      - name: generate project files
+      - name: generate files
         shell: bash
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DGEODE_TARGET_PLATFORM=Win32
 
-      - name: compile mod
+      - name: compile
         shell: bash
         run: cmake --build build --config Release
 
-      - name: save windows build
+      - name: upload windows
         uses: actions/upload-artifact@v4
         with:
           name: screentime-windows
