@@ -1,30 +1,106 @@
-name: Build
-on: [push, pull_request, workflow_dispatch]
+name: mod-builds
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-        - {name: Windows, os: windows-latest, target: Win32}
-        - {name: Android32, os: ubuntu-latest, target: Android32}
-        - {name: Android64, os: ubuntu-latest, target: Android64}
-    name: ${{ matrix.config.name }}
-    runs-on: ${{ matrix.config.os }}
-    steps:
-    - uses: actions/checkout@v4
-    - uses: geode-sdk/build-geode-mod@v1
-      with:
-        target: ${{ matrix.config.target }}
-        combine: true
-  package:
+  android64:
     runs-on: ubuntu-latest
-    needs: build
     steps:
-    - uses: actions/checkout@v4
-    - uses: geode-sdk/build-geode-mod/combine@v1
-      id: build
-    - uses: actions/upload-artifact@v4
-      with:
-        name: Build
-        path: ${{ steps.build.outputs.build-output }}
+      - name: get repo
+        uses: actions/checkout@v4
+
+      - name: setup geode cli
+        run: |
+          git clone --recursive https://github.com/geode-sdk/cli.git geode-cli
+          cd geode-cli
+          chmod +x install.sh
+          ./install.sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: setup sdk
+        run: |
+          geode sdk install 5.4.1
+          geode sdk use 5.4.1
+          geode sdk install-binaries android64
+
+      - name: generate project files
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DGEODE_TARGET_PLATFORM=Android64
+
+      - name: compile mod
+        run: cmake --build build --config Release
+
+      - name: save android64 build
+        uses: actions/upload-artifact@v4
+        with:
+          name: screentime-android64
+          path: build/**/*.geode
+
+  android32:
+    runs-on: ubuntu-latest
+    steps:
+      - name: get repo
+        uses: actions/checkout@v4
+
+      - name: setup geode cli
+        run: |
+          git clone --recursive https://github.com/geode-sdk/cli.git geode-cli
+          cd geode-cli
+          chmod +x install.sh
+          ./install.sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: setup sdk
+        run: |
+          geode sdk install 5.4.1
+          geode sdk use 5.4.1
+          geode sdk install-binaries android32
+
+      - name: generate project files
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DGEODE_TARGET_PLATFORM=Android32
+
+      - name: compile mod
+        run: cmake --build build --config Release
+
+      - name: save android32 build
+        uses: actions/upload-artifact@v4
+        with:
+          name: screentime-android32
+          path: build/**/*.geode
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: get repo
+        uses: actions/checkout@v4
+
+      - name: setup geode cli
+        shell: bash
+        run: |
+          git clone --recursive https://github.com/geode-sdk/cli.git geode-cli
+          cd geode-cli
+          ./install.sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: setup sdk
+        shell: bash
+        run: |
+          geode sdk install 5.4.1
+          geode sdk use 5.4.1
+          geode sdk install-binaries win
+
+      - name: generate project files
+        shell: bash
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DGEODE_TARGET_PLATFORM=Win32
+
+      - name: compile mod
+        shell: bash
+        run: cmake --build build --config Release
+
+      - name: save windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: screentime-windows
+          path: build/**/*.geode
