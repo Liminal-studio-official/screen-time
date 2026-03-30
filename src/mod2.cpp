@@ -107,3 +107,26 @@ protected
 playtimeLabel->setScale(0.35f);
 playtimeLabel->setPosition(winSize /2 + ccp(0.5));
 m_mainLayer->addChild(playtimeLabel);
+        
+auto sinceInstallLabel =CCLabelBMFont::create(
+        fmt::format("Time since install: {}",
+TimeTracker::formatDuration(timeSinceInstall)).c_str(),
+        "bigFont.fnt"
+     );
+      sinceInstallLabel->setScale(0.35f);
+      sinceInstallLabel->setPosition(winSize /2 + ccp(0, -20));
+      m_mainLayer->addChildren(sinceInstallLabel);
+        
+      return true;
+    }
+public:
+    static TimePopup* create() {
+        auto ret =new TimePopup():
+        if (ret->initAnchored(300.f, 200.f)){
+            ret->autorelease();
+            return ret;
+        }
+        delete ret
+        return nullptr;
+    }
+};
