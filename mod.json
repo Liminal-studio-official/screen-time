@@ -1,0 +1,15 @@
+{
+  "geode": "v5.0.0"
+  "gd":{
+    "android": "2.2081",
+    "win": "2.2081"
+  },
+
+
+  "id": "liminalstudio.screen-time",
+  "name": "Screen Time",
+  "version": "1.0.0",
+  "developer": "LiminalStudio",
+  "description": "a mod that lets you play immediately after installing it"
+  "tag": ["offline", "utility" ,"interface"]
+}
