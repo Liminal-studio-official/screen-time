@@ -130,3 +130,38 @@ public:
         return nullptr;
     }
 };
+class $modify(MyMenuLayer, MenuLayer){
+    bool init() {
+        if (!MenuLayer::init())return false;
+        if (!this->getChildByID("screentime-saver"_spr)){
+            auto saver =SessionSaver::create();
+            saver->setID("screentime-saver_spr");
+            this->addChild(saver);
+        }
+      auto bottomMenu =this->getChildByID("bottom-menu");
+      if (!bottomMenu){
+          log::warn("Could not find bottom-menu");
+          return true;
+      }
+      auto sprite =CircleButtonSprite::create(
+        CCLabelBMFont::create("Time", "bigFont.fnt")
+        CirlceBaseColor::Green,
+        CircleBaseSize::Medium
+      );
+      if (auto label =sprite->getChildByType<CCLabelBMFont>(0)){
+          label->setScale(0.4f);
+      }
+      auto btn =CCMenuItemSpriteExtra::create(
+          sprite,
+          this,
+          menu_selector(MyMenuLayer::onTimeButton)
+      );
+      btn->setID("time-button"_spr);
+      bottomMenu->addChild(btn);
+      bottomMenu->updateLayout();
+      return true;
+    }
+    void onTimeButton(CCObject* sender){
+        TimePopup::create()->show();
+    }
+};
