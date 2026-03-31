@@ -67,7 +67,7 @@ Merci d’utiliser Screen Time ! Surveille ton temps de jeu et amuse-toi bien su
 
 ---
 
-##Credit
+## Credit
 
 - made by liminal studio 
 - people : Nico341
