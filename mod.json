@@ -1,16 +1,7 @@
 {
   "tags": ["offline", "utility", "interface", "fun", "tracking"],
   "geode": "5.4.1",
-  "gd": {
-    "android": "2.2081",
-    "win": "2.2081"
-  },
-
-
-
-
-
-    
+  "gd": {"android": "2.2081", "win": "2.2081"},
   "id": "liminalstudio.screen-time",
   "name": "Screen Time",
   "version": "v1.0.0",
