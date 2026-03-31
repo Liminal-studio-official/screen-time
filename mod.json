@@ -5,7 +5,7 @@
   "id": "liminalstudio.screen-time",
   "name": "Screen Time",
   "version": "v1.0.0",
-  "developer": "LiminalStudio",
+  "developer": "Liminal Studio",
   "description": "Tracks how long you have been playing. Simple and lightweight.",
   "icon": ["logo.png"]
 }
