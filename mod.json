@@ -1,5 +1,5 @@
 {
-  "tags": ["offline", "utility", "interface", "tracking"],
+  "tags": ["offline", "utility", "interface"],
   "geode": "5.4.1",
   "gd": {"android": "2.2081", "win": "2.2081"},
   "id": "liminalstudio.screen-time",
