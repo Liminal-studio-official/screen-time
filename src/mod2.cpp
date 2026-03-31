@@ -3,95 +3,99 @@
 
 using namespace geode::prelude;
 
-static int64_t g_start = 0;
+static int64_t g_sess = 0;
 
-static int64_t getAccum() {
+static int64_t stored() {
     return Mod::get()->getSavedValue<int64_t>("playtime", 0);
 }
 
 static void flush() {
-    if (g_start <= 0) return;
-    auto now = (int64_t)std::time(nullptr);
-    auto dt = now - g_start;
-    if (dt < 1) return;
-    Mod::get()->setSavedValue("playtime", getAccum() + dt);
-    g_start = now;
+    if (g_sess < 1) return;
+    int64_t n = (int64_t)std::time(nullptr);
+    int64_t d = n - g_sess;
+    if (d < 1) return;
+    Mod::get()->setSavedValue("playtime", stored() + d);
+    g_sess = n;
 }
 
 static std::string pretty(int64_t sec) {
-    int d = sec / 86400;
-    int h = sec / 3600 % 24;
-    int m = sec / 60 % 60;
+    int y = sec / 31536000;
+    int d = (sec / 86400) % 365;
+    int h = (sec / 3600) % 24;
+    int m = (sec / 60) % 60;
     int s = sec % 60;
 
-    std::string r;
-    if (d) r += std::to_string(d) + "d ";
-    if (d || h) r += std::to_string(h) + "h ";
-    r += std::to_string(m) + "m ";
-    r += std::to_string(s) + "s";
-    return r;
+    std::string out;
+    if (y) out += std::to_string(y) + "y ";
+    if (y || d) out += std::to_string(d) + "d ";
+    if (y || d || h) out += std::to_string(h) + "h ";
+    out += std::to_string(m) + "m " + std::to_string(s) + "s";
+    return out;
 }
 
 class Ticker : public CCNode {
+    void onTick(float) { flush(); }
+
     bool init() override {
         if (!CCNode::init()) return false;
-        schedule(schedule_selector(Ticker::tick), 25.f);
+        schedule(schedule_selector(Ticker::onTick), 20.f);
         return true;
     }
-    void tick(float) { flush(); }
 public:
     static Ticker* make() {
-        auto t = new Ticker;
-        if (t && t->init()) { t->autorelease(); return t; }
-        CC_SAFE_DELETE(t);
+        auto r = new Ticker;
+        if (r && r->init()) { r->autorelease(); return r; }
+        CC_SAFE_DELETE(r);
         return nullptr;
     }
 };
 
 $on_mod(Loaded) {
-    g_start = (int64_t)std::time(nullptr);
+    g_sess = (int64_t)std::time(nullptr);
 }
 
-class $modify(HookedMenu, MenuLayer) {
+class $modify(MyMenu, MenuLayer) {
     bool init() {
         if (!MenuLayer::init()) return false;
 
-        if (!getChildByID("ticker"_spr)) {
-            auto tk = Ticker::make();
-            tk->setID("ticker"_spr);
-            addChild(tk);
+        if (!getChildByID("tk"_spr)) {
+            auto t = Ticker::make();
+            t->setID("tk"_spr);
+            addChild(t);
         }
 
-        auto menu = getChildByID("bottom-menu");
-        if (!menu) return true;
+        auto btm = getChildByID("bottom-menu");
+        if (!btm) return true;
 
-        auto circle = CircleButtonSprite::create(
-            CCLabelBMFont::create("T", "bigFont.fnt"),
-            CircleBaseColor::Green,
-            CircleBaseSize::Medium
-        );
-        circle->setScale(.75f);
+        auto lbl = CCLabelBMFont::create("T", "bigFont.fnt");
+        lbl->setScale(.55f);
+
+        auto circle = CircleButtonSprite::create(lbl, CircleBaseColor::Green, CircleBaseSize::Medium);
+
+        if (auto ref = btm->getChildByID("settings-button")) {
+            float sc = ref->getScale();
+            circle->setScale(sc);
+        }
 
         auto btn = CCMenuItemSpriteExtra::create(
-            circle, this,
-            menu_selector(HookedMenu::onTime)
+            circle, this, menu_selector(MyMenu::showTime)
         );
-        btn->setID("playtime-btn"_spr);
-        menu->addChild(btn);
-        menu->updateLayout();
+        btn->setID("st-btn"_spr);
+        btm->addChild(btn);
+        btm->updateLayout();
 
         return true;
     }
 
-    void onTime(CCObject*) {
+    void showTime(CCObject*) {
         flush();
-        auto t = getAccum();
-        if (g_start > 0)
-            t += (int64_t)std::time(nullptr) - g_start;
+        int64_t tot = stored();
+        if (g_sess > 0)
+            tot += (int64_t)std::time(nullptr) - g_sess;
 
         FLAlertLayer::create(
             "Screen Time",
-            pretty(t).c_str(),
+            pretty(tot).c_str(),
             "OK"
         )->show();
     }
