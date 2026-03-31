@@ -1,31 +1,20 @@
 {
-    "geode": "5.4.1",
-    
-    
-    "gd": {
-        "android": "2.2081",
-        
-        "win": "2.2081"
-    },
+  "tags": ["offline", "utility", "interface", "fun", "tracking"],
+  "geode": "5.4.1",
+  "gd": {
+    "android": "2.2081",
+    "win": "2.2081"
+  },
 
 
 
 
+
     
-    "id": "liminalstudio.screen-time",
-    
-    "name": "Screen Time",
-    
-    "version": "v1.0.0",
-    
-    "developer": "LiminalStudio",
-    
-    "description": "Tracks your total playtime in Geometry Dash.",
-    
-    "tags": ["utility", "offline", "playtime", "interface", "geode"],
-    
-    
-    "resources": [
-        "icon.png"
-    ]
+  "id": "liminalstudio.screen-time",
+  "name": "Screen Time",
+  "version": "v1.0.0",
+  "developer": "LiminalStudio",
+  "description": "Tracks how long you have been playing. Simple and lightweight.",
+  "icon": ["icon.png"]
 }
