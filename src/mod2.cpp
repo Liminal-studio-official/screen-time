@@ -1,6 +1,5 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-
 using namespace geode::prelude;
 
 static int64_t s_sessionStart = 0;
@@ -12,8 +11,8 @@ public:
     }
 
     static void addSeconds(int64_t s) {
-        auto t = getAccumulatedSeconds();
-        Mod::get()->setSavedValue("accumulated-seconds", t + s);
+        auto cur = getAccumulatedSeconds();
+        Mod::get()->setSavedValue("accumulated-seconds", cur + s);
     }
 
     static std::string formatDuration(int64_t t) {
@@ -21,35 +20,35 @@ public:
         int h = (t % 86400) / 3600;
         int m = (t % 3600) / 60;
         int s = t % 60;
-        std::string o;
-        if(d > 0) o += std::to_string(d) + "d ";
-        if(h > 0 || d > 0) o += std::to_string(h) + "h ";
-        o += std::to_string(m) + "m ";
-        o += std::to_string(s) + "s";
-        return o;
+        std::string out;
+        if (d > 0) out += std::to_string(d) + "d ";
+        if (h > 0 || d > 0) out += std::to_string(h) + "h ";
+        out += std::to_string(m) + "m ";
+        out += std::to_string(s) + "s";
+        return out;
     }
 };
 
 class SessionSaver : public CCNode {
-public: 
+public:
     static SessionSaver* create() {
         auto r = new SessionSaver();
-        if(r && r->init()) { r->autorelease(); return r; }
-        delete r; 
+        if (r && r->init()) { r->autorelease(); return r; }
+        delete r;
         return nullptr;
     }
 
     bool init() {
-        if(!CCNode::init()) return false;
+        if (!CCNode::init()) return false;
         this->schedule(schedule_selector(SessionSaver::tick), 30.f);
         return true;
     }
 
     void tick(float) {
-        if(s_sessionStart <= 0) return;
+        if (s_sessionStart <= 0) return;
         auto now = static_cast<int64_t>(std::time(nullptr));
         auto diff = now - s_sessionStart;
-        if(diff > 0) {
+        if (diff > 0) {
             TimeTracker::addSeconds(diff);
             s_sessionStart = now;
         }
@@ -58,39 +57,31 @@ public:
 
 class $modify(MyMenuLayer, MenuLayer) {
     bool init() {
-        if(!MenuLayer::init()) return false;
+        if (!MenuLayer::init()) return false;
 
-        if(!this->getChildByID("screentime-saver"_spr)) {
-            auto s = SessionSaver::create();
-            s->setID("screentime-saver"_spr);
-            this->addChild(s);
+        if (!this->getChildByID("screentime-saver"_spr)) {
+            auto saver = SessionSaver::create();
+            saver->setID("screentime-saver"_spr);
+            this->addChild(saver);
         }
 
         auto menu = this->getChildByID("bottom-menu");
-        if(!menu) return true;
+        if (!menu) return true;
 
-        auto spr = CircleButtonSprite::create(
-            CCSprite::create("icon.png"_spr),
-            CircleBaseColor::Green,
-            CircleBaseSize::Medium
-        );
-        spr->setScale(0.7f);
+        auto tex = CCTextureCache::sharedTextureCache()->addImage("icon.png");
+        auto spr = CircleButtonSprite::createWithTexture(tex, CircleBaseSize::Medium);
 
-        auto btn = CCMenuItemSpriteExtra::create(
-            spr,
-            this,
-            menu_selector(MyMenuLayer::onTime)
-        );
+        auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(MyMenuLayer::onTime));
         btn->setID("time-button"_spr);
-
         menu->addChild(btn);
         menu->updateLayout();
+
         return true;
     }
 
     void onTime(CCObject*) {
         auto t = TimeTracker::getAccumulatedSeconds();
-        if(s_sessionStart > 0) 
+        if (s_sessionStart > 0)
             t += static_cast<int64_t>(std::time(nullptr)) - s_sessionStart;
 
         auto txt = fmt::format("Playtime: {}", TimeTracker::formatDuration(t));
