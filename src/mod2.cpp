@@ -1,183 +1,156 @@
-#include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-#include <Geode/ui/Popup.hpp>
+#include <Geode/Geode.hpp>
+
 using namespace geode::prelude;
 
 static int64_t s_sessionStart = 0;
 
 class TimeTracker {
 public:
-    static int64_t getInstallTimeStamp() {
-      auto saved = Mod::get()->getSavedValue<int64_t>("install-time", 0);
-      if (saved == 0) {
-        saved = static_cast<int64_t>(std::time(nullptr));
-        Mod::get()->setSavedValue("install-time", saved);
-      }
-      return saved;
-}
-static int64_t getAccumulatedSeconds() {
-  return Mod::get()->getSavedValue<int64_t>("accumulated-seconds", 0);
-}
-static void addSeconds(int64_t seconds) {
-  auto totalSeconds = getAccumulatedSeconds() + seconds;
-  Mod::get()->setSavedValue("accumulated-seconds", totalSeconds);
-}
-static std::string formatDuration(int64_t totalSeconds) {
-  int days = totalSeconds / 86400;
-  int hours = (totalSeconds % 86400) / 3600;
-  int minutes = (totalSeconds % 3600) / 60;
-  int secs = totalSeconds % 60;
-  std::string result;
-  if (days > 0) {
-    result += std::to_string(days) + "d ";
-      }
-  if (hours > 0 || days > 0) {
-    result += std::to_string(hours) + "h ";
-      }
-  result += std::to_string(minutes) + "m ";
-  result += std::to_string(secs) + "s ";
-  return result;
-}
-static std::string formatDate(int64_t timestamp){
-  std::time_t time = static_cast<std::time_t>(timestamp);
-  std::tm* tm = std::localtime(&time);
-  char buffer[64];
-  std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", tm);
-  return std::string(buffer);
-  }
-};
-
-$on_mod(Loaded) {
-  TimeTracker::getInstallTimeStamp();
-  s_sessionStart = static_cast<int64_t>(std::time(nullptr));
-  log::info("Screen Time loaded.Session started.");
-}
-
-$on_mod(Loaded) {
-  if (s_sessionStart > 0) {
-    auto now = static_cast<int64_t>(std::time(nullptr));
-    auto sessionDuration = now - s_sessionStart;
-    if (sessionDuration > 0)
-      TimeTracker::addSeconds(sessionDuration);
+    static int64_t getAccumulatedSeconds() {
+        return Mod::get()->getSavedValue<int64_t>("accumulated-seconds", 0);
     }
-    s_sessionStart = 0;
-  log::info("Screen Time unloaded. session saved.");
-}
+
+    static std::string formatDate(int64_t ts) {
+        std::time_t raw = static_cast<std::time_t>(ts);
+        std::tm* t = std::localtime(&raw);
+
+        char buf[64];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", t);
+
+        return std::string(buf);
+    }
+
+    static void addSeconds(int64_t s) {
+        auto cur = getAccumulatedSeconds();
+        Mod::get()->setSavedValue("accumulated-seconds", cur + s);
+    }
+
+    static int64_t getInstallTimeStamp() {
+        auto v = Mod::get()->getSavedValue<int64_t>("install-time", 0);
+
+        if (v == 0) {
+            v = static_cast<int64_t>(std::time(nullptr));
+            Mod::get()->setSavedValue("install-time", v);
+        }
+
+        return v;
+    }
+
+    static std::string formatDuration(int64_t total) {
+        int d = total / 86400;
+        int h = (total % 86400) / 3600;
+        int m = (total % 3600) / 60;
+        int s = total % 60;
+
+        std::string out;
+
+        if (d > 0) out += std::to_string(d) + "d ";
+        if (h > 0 || d > 0) out += std::to_string(h) + "h ";
+
+        out += std::to_string(m) + "m ";
+        out += std::to_string(s) + "s";
+
+        return out;
+    }
+};
 
 class SessionSaver : public CCNode {
-public: 
-    static SessionSaver* create () {
-      auto ret = new SessionSaver();
-      if (ret && ret->init()) {
-        ret->autorelease();
-        return ret;
-      }
-delete ret;
-return nullptr;
-    }
-bool init() {
-  if (!CCNode::init()) return false;
-  this->schedule(schedule_selector(SessionSaver::onTick), 30.0f);
-  return true;
-}
-void onTick(float dt) {
-  if (s_sessionStart <= 0) return;
-  auto now = static_cast<int64_t>(std::time(nullptr));
-  auto sessionDuration = now - s_sessionStart;
-  if (sessionDuration > 0) {
-    TimeTracker::addSeconds(sessionDuration);
-    s_sessionStart = now;
-  }
-}
-};
-
-class TimePopup : public Popup<> {
-protected:
-    bool setup() override {
-      this->setTitle("Screen Time");
-      auto winSize = this->m_mainLayer->getContentSize();
-      auto installTime = TimeTracker::getInstallTimeStamp();
-      auto accumulated = TimeTracker::getAccumulatedSeconds();
-      int64_t currentExtra = 0;
-      if (s_sessionStart > 0){
-        auto now = static_cast<int64_t>(std::time(nullptr));
-        currentExtra = now - s_sessionStart;
-        if (currentExtra < 0) currentExtra = 0;
-      }
-    auto totalPlaytime = accumulated + currentExtra;
-    auto now = static_cast<int64_t>(std::time(nullptr));
-    auto timeSinceInstall = now - installTime;
-    auto installLabel = CCLabelBMFont::create(
-      fmt::format("Installed: {}", TimeTracker::formatDate(installTime)).c_str(),
-      "bigFont.fnt"
-  );
-installLabel->setScale(0.35f);
-installLabel->setPosition(winSize / 2 + ccp(0, 20));
-this->m_mainLayer->addChild(installLabel);
-        
-auto playtimeLabel = CCLabelBMFont::create(
-        fmt::format("Playtime: {}", TimeTracker::formatDuration(totalPlaytime)).c_str(),
-        "bigFont.fnt"
-     );
-playtimeLabel->setScale(0.35f);
-playtimeLabel->setPosition(winSize / 2 + ccp(0, 0));
-this->m_mainLayer->addChild(playtimeLabel);
-        
-auto sinceInstallLabel = CCLabelBMFont::create(
-        fmt::format("Time since install: {}",
-TimeTracker::formatDuration(timeSinceInstall)).c_str(),
-        "bigFont.fnt"
-     );
-      sinceInstallLabel->setScale(0.35f);
-      sinceInstallLabel->setPosition(winSize / 2 + ccp(0, -20));
-      this->m_mainLayer->addChild(sinceInstallLabel);
-        
-      return true;
-    }
 public:
-    static TimePopup* create() {
-        auto ret = new TimePopup();
-        if (ret && ret->initAnchored(300.f, 200.f)) {
-            ret->autorelease();
-            return ret;
+    static SessionSaver* create() {
+        auto r = new SessionSaver();
+
+        if (r && r->init()) {
+            r->autorelease();
+            return r;
         }
-        delete ret;
+
+        delete r;
         return nullptr;
     }
+
+    bool init() {
+        if (!CCNode::init()) return false;
+
+        this->schedule(schedule_selector(SessionSaver::tick), 30.f);
+        return true;
+    }
+
+    void tick(float) {
+        if (s_sessionStart <= 0) return;
+
+        auto now = static_cast<int64_t>(std::time(nullptr));
+        auto diff = now - s_sessionStart;
+
+        if (diff > 0) {
+            TimeTracker::addSeconds(diff);
+            s_sessionStart = now;
+        }
+    }
 };
 
-class $modify(MyMenuLayer, MenuLayer){
+class $modify(MyMenuLayer, MenuLayer) {
     bool init() {
-        if (!MenuLayer::init())return false;
-        if (!this->getChildByID("screentime-saver"_spr)){
-            auto saver = SessionSaver::create();
-            saver->setID("screentime-saver"_spr);
-            this->addChild(saver);
+        if (!MenuLayer::init()) return false;
+
+        if (!this->getChildByID("screentime-saver"_spr)) {
+            auto s = SessionSaver::create();
+            s->setID("screentime-saver"_spr);
+            this->addChild(s);
         }
-      auto bottomMenu = this->getChildByID("bottom-menu");
-      if (!bottomMenu){
-          log::warn("Could not find bottom-menu");
-          return true;
-      }
-      auto sprite = CircleButtonSprite::create(
-        CCLabelBMFont::create("Time", "bigFont.fnt"),
-        CircleBaseColor::Green,
-        CircleBaseSize::Medium
-      );
-      if (auto label = sprite->getChildByType<CCLabelBMFont>(0)){
-          label->setScale(0.4f);
-      }
-      auto btn = CCMenuItemSpriteExtra::create(
-          sprite,
-          this,
-          menu_selector(MyMenuLayer::onTimeButton)
-      );
-      btn->setID("time-button"_spr);
-      bottomMenu->addChild(btn);
-      bottomMenu->updateLayout();
-      return true;
+
+        auto menu = this->getChildByID("bottom-menu");
+        if (!menu) {
+            log::warn("no bottom menu?");
+            return true;
+        }
+
+        auto spr = CircleButtonSprite::create(
+            CCLabelBMFont::create("Time", "bigFont.fnt"),
+            CircleBaseColor::Green,
+            CircleBaseSize::Medium
+        );
+
+        if (auto l = spr->getChildByType<CCLabelBMFont>(0)) {
+            l->setScale(0.4f);
+        }
+
+        auto btn = CCMenuItemSpriteExtra::create(
+            spr,
+            this,
+            menu_selector(MyMenuLayer::onTime)
+        );
+
+        btn->setID("time-button"_spr);
+
+        menu->addChild(btn);
+        menu->updateLayout();
+
+        return true;
     }
-    void onTimeButton(CCObject* sender){
-        TimePopup::create()->show();
+
+    void onTime(CCObject*) {
+        auto install = TimeTracker::getInstallTimeStamp();
+        auto total = TimeTracker::getAccumulatedSeconds();
+
+        if (s_sessionStart > 0) {
+            total += static_cast<int64_t>(std::time(nullptr)) - s_sessionStart;
+        }
+
+        auto text = fmt::format(
+            "Installed: {}\nPlaytime: {}",
+            TimeTracker::formatDate(install),
+            TimeTracker::formatDuration(total)
+        );
+
+        FLAlertLayer::create("Screen Time", text.c_str(), "OK")->show();
     }
 };
+
+$on_mod(Loaded) {
+    TimeTracker::getInstallTimeStamp();
+
+    s_sessionStart = static_cast<int64_t>(std::time(nullptr));
+
+    log::info("screen time ready");
+}
