@@ -30,10 +30,10 @@ static std::string formatDuration(int64_t totalSeconds) {
   std::string result;
   if (days > 0) {
     result += std::to_string(days) + "d ";
-  }
+      }
   if (hours > 0 || days > 0) {
     result += std::to_string(hours) + "h ";
-  }
+      }
   result += std::to_string(minutes) + "m ";
   result += std::to_string(secs) + "s ";
   return result;
@@ -50,10 +50,10 @@ static std::string formatDate(int64_t timestamp){
 $on_mod(Loaded) {
   TimeTracker::getInstallTimeStamp();
   s_sessionStart = static_cast<int64_t>(std::time(nullptr));
-  log::info("Screen Time loaded. Session started.");
+  log::info("Screen Time loaded.Session started.");
 }
 
-$on_mod(Disabled) {
+$on_mod(Loaded) {
   if (s_sessionStart > 0) {
     auto now = static_cast<int64_t>(std::time(nullptr));
     auto sessionDuration = now - s_sessionStart;
@@ -91,11 +91,11 @@ void onTick(float dt) {
 }
 };
 
-class TimePopup : public geode::Popup<> {
+class TimePopup : public Popup<> {
 protected:
     bool setup() override {
       this->setTitle("Screen Time");
-      auto winSize = m_mainLayer->getContentSize();
+      auto winSize = this->m_mainLayer->getContentSize();
       auto installTime = TimeTracker::getInstallTimeStamp();
       auto accumulated = TimeTracker::getAccumulatedSeconds();
       int64_t currentExtra = 0;
@@ -107,38 +107,37 @@ protected:
     auto totalPlaytime = accumulated + currentExtra;
     auto now = static_cast<int64_t>(std::time(nullptr));
     auto timeSinceInstall = now - installTime;
-
     auto installLabel = CCLabelBMFont::create(
       fmt::format("Installed: {}", TimeTracker::formatDate(installTime)).c_str(),
       "bigFont.fnt"
   );
-    installLabel->setScale(0.35f);
-    installLabel->setPosition(winSize / 2 + ccp(0, 20));
-    m_mainLayer->addChild(installLabel);
-
-    auto playtimeLabel = CCLabelBMFont::create(
+installLabel->setScale(0.35f);
+installLabel->setPosition(winSize / 2 + ccp(0, 20));
+this->m_mainLayer->addChild(installLabel);
+        
+auto playtimeLabel = CCLabelBMFont::create(
         fmt::format("Playtime: {}", TimeTracker::formatDuration(totalPlaytime)).c_str(),
         "bigFont.fnt"
-    );
-    playtimeLabel->setScale(0.35f);
-    playtimeLabel->setPosition(winSize / 2 + ccp(0, 0));
-    m_mainLayer->addChild(playtimeLabel);
+     );
+playtimeLabel->setScale(0.35f);
+playtimeLabel->setPosition(winSize / 2 + ccp(0, 0));
+this->m_mainLayer->addChild(playtimeLabel);
         
-    auto sinceInstallLabel = CCLabelBMFont::create(
+auto sinceInstallLabel = CCLabelBMFont::create(
         fmt::format("Time since install: {}",
-        TimeTracker::formatDuration(timeSinceInstall)).c_str(),
+TimeTracker::formatDuration(timeSinceInstall)).c_str(),
         "bigFont.fnt"
      );
       sinceInstallLabel->setScale(0.35f);
       sinceInstallLabel->setPosition(winSize / 2 + ccp(0, -20));
-      m_mainLayer->addChild(sinceInstallLabel);
+      this->m_mainLayer->addChild(sinceInstallLabel);
         
       return true;
     }
 public:
     static TimePopup* create() {
         auto ret = new TimePopup();
-        if (ret && ret->initAnchored(300.f, 200.f)){
+        if (ret && ret->initAnchored(300.f, 200.f)) {
             ret->autorelease();
             return ret;
         }
@@ -149,7 +148,7 @@ public:
 
 class $modify(MyMenuLayer, MenuLayer){
     bool init() {
-        if (!MenuLayer::init()) return false;
+        if (!MenuLayer::init())return false;
         if (!this->getChildByID("screentime-saver"_spr)){
             auto saver = SessionSaver::create();
             saver->setID("screentime-saver"_spr);
