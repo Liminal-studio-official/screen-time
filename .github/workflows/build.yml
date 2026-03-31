@@ -1,49 +1,49 @@
 name: Build Geode Mod
 
 on:
+  workflow_dispatch:
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-  workflow_dispatch:
 
 jobs:
+  build-windows:
+    runs-on: windows-latest
+    name: Build Windows
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout repository
+
+      - id: build-win
+        name: Build Geode mod for Windows
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          target: "Win64"
+          platform: "win"
+
+      - uses: actions/upload-artifact@v4
+        name: Upload Windows artifact
+        with:
+          name: screen-time-win64
+          path: ${{ steps.build-win.outputs.build-output }}
+
   build-android:
     name: Build Android
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        name: Checkout repository
 
       - name: Build Geode mod for Android
         id: build-android
         uses: geode-sdk/build-geode-mod@main
         with:
           target: "Android64"
+          platform: "android"
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
-          name: screen-time-android64
           path: ${{ steps.build-android.outputs.build-output }}
-
-  build-windows:
-    name: Build Windows
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Build Geode mod for Windows
-        id: build-win
-        uses: geode-sdk/build-geode-mod@main
-        with:
-          target: "Win32"
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: screen-time-win32
-          path: ${{ steps.build-win.outputs.build-output }}
+          name: screen-time-android64
