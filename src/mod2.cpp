@@ -93,7 +93,7 @@ class $modify(MyMenuLayer, MenuLayer) {
             total += (int64_t)std::time(0) - sess;
         
         FLAlertLayer::create(
-            "play time / temps de jeu",
+            "play time",
             pretty(total).c_str(),  
             "OK"
         )->show();
