@@ -1,18 +1,29 @@
 {
     "geode": "5.4.1",
+    
     "gd": {
         "android": "2.2081",
+        
         "win": "2.2081"
     },
 
 
-
-
-  
+    
     "id": "liminalstudio.screen-time",
+    
     "name": "Screen Time",
-    "version": "v1.0.0",
-    "developer": "LiminalStudio",
-    "description": "Tracks how long you have been playing since installation.",
-    "tags": ["offline", "utility", "interface"]
+    
+    "version": "1.0.0",
+    
+    "developer": "Liminal Studio",
+    
+    "description": "Track your playtime in Geometry Dash since installation. View total playtime and install date directly from the main menu.",
+    
+    "tags": ["offline", "utility", "interface"],
+    
+    "resources": {
+        "sprites": [
+            "resources/icon.png"
+        ]
+    }
 }
