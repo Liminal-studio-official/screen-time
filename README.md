@@ -29,7 +29,7 @@ Screen Time suit ton **temps de jeu total** et te l’affiche directement via un
 
 ## 🎮 How to Install / Comment Installer
 1. Make sure you have **Geode 5.4.1** installed / Assure-toi d’avoir **Geode 5.4.1** installé.  
-2. Place the mod `ScreenTime.geode` in your **Mods folder** of Geometry Dash / Place le mod `ScreenTime.geode` dans le dossier **Mods** de Geometry Dash.  
+2. Place the mod `file.geode` in your **Mods folder** of Geometry Dash / Place le mod `file.geode` dans le dossier **Mods** de Geometry Dash.  
 3. Open Geometry Dash, go to the **Mods menu**, and check the icon / Lance Geometry Dash, ouvre le menu **Mods** et vérifie l’icône.  
 4. Click the button in the main menu to see your playtime / Clique sur le bouton dans le menu principal pour voir ton temps de jeu.  
 
