@@ -64,3 +64,17 @@ Le temps de jeu est sauvegardé **toutes les 30 secondes**, même si tu quittes 
 ## ❤️ Thanks / Merci
 Thanks for using Screen Time! Keep track of your playtime and enjoy Geometry Dash ⏳  
 Merci d’utiliser Screen Time ! Surveille ton temps de jeu et amuse-toi bien sur Geometry Dash ⏳
+
+---
+
+##Credit
+
+- made by liminal studio 
+- people : Nico341
+
+---
+
+[![Geode](https://img.shields.io/badge/Geode-5.4.1-blue)](#)
+[![Geometry Dash](https://img.shields.io/badge/Geometry%20Dash-2.2081-brightgreen)](#)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-orange)](#)
+[![Developer](https://img.shields.io/badge/Developer-liminal%20studio-purple)](#)
