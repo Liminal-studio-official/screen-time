@@ -6,7 +6,7 @@ static int64_t s_sessionStart = 0;
 
 class TimeTracker {
 public:
-    static int64_t getInstallTimestamp() {
+    static int64_t getInstallTimeStamp() {
         auto saved = Mod::get()->getSavedValue<int64_t>("install-time", 0);
         if (saved == 0) {
             saved = static_cast<int64_t>(std::time(nullptr));
@@ -31,17 +31,14 @@ public:
         int secs = totalSeconds % 60;
 
         std::string result;
-
         if (days > 0) {
             result += std::to_string(days) + "d ";
         }
         if (hours > 0 || days > 0) {
             result += std::to_string(hours) + "h ";
         }
-
         result += std::to_string(minutes) + "m ";
         result += std::to_string(secs) + "s ";
-
         return result;
     }
 
@@ -55,7 +52,7 @@ public:
 };
 
 $on_mod(Loaded) {
-    TimeTracker::getInstallTimestamp();
+    TimeTracker::getInstallTimeStamp();
     s_sessionStart = static_cast<int64_t>(std::time(nullptr));
     log::info("Screen Time loaded. Session started.");
 }
@@ -91,10 +88,8 @@ public:
 
     void onTick(float dt) {
         if (s_sessionStart <= 0) return;
-
         auto now = static_cast<int64_t>(std::time(nullptr));
         auto sessionDuration = now - s_sessionStart;
-
         if (sessionDuration > 0) {
             TimeTracker::addSeconds(sessionDuration);
             s_sessionStart = now;
@@ -106,10 +101,9 @@ class TimePopup : public geode::Popup<> {
 protected:
     bool setup() override {
         this->setTitle("Screen Time");
-
         auto winSize = m_mainLayer->getContentSize();
 
-        auto installTime = TimeTracker::getInstallTimestamp();
+        auto installTime = TimeTracker::getInstallTimeStamp();
         auto accumulated = TimeTracker::getAccumulatedSeconds();
 
         int64_t currentExtra = 0;
@@ -120,7 +114,6 @@ protected:
         }
 
         auto totalPlaytime = accumulated + currentExtra;
-
         auto now = static_cast<int64_t>(std::time(nullptr));
         auto timeSinceInstall = now - installTime;
 
@@ -132,8 +125,17 @@ protected:
         installLabel->setPosition(winSize / 2 + ccp(0, 5));
         m_mainLayer->addChild(installLabel);
 
+        auto playtimeLabel = CCLabelBMFont::create(
+            fmt::format("Playtime: {}", TimeTracker::formatDuration(totalPlaytime)).c_str(),
+            "bigFont.fnt"
+        );
+        playtimeLabel->setScale(0.35f);
+        playtimeLabel->setPosition(winSize / 2 + ccp(0, -5));
+        m_mainLayer->addChild(playtimeLabel);
+
         auto sinceInstallLabel = CCLabelBMFont::create(
-            fmt::format("Time since install: {}", TimeTracker::formatDuration(timeSinceInstall)).c_str(),
+            fmt::format("Time since install: {}",
+                TimeTracker::formatDuration(timeSinceInstall)).c_str(),
             "bigFont.fnt"
         );
         sinceInstallLabel->setScale(0.35f);
@@ -188,7 +190,6 @@ class $modify(MyMenuLayer, MenuLayer) {
         );
 
         btn->setID("time-button"_spr);
-
         bottomMenu->addChild(btn);
         bottomMenu->updateLayout();
 
