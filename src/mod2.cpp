@@ -1,91 +1,82 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-#include <fmt/format.h>
+
 using namespace geode::prelude;
 
-static int64_t s_sessionStart = 0;
+static int64_t g_start = 0;
 
-class TimeTracker {
-public:
-    static int64_t getAccumulatedSeconds() {
-        return Mod::get()->getSavedValue<int64_t>("accumulated-seconds", 0);
-    }
+static int64_t getAccum() {
+    return Mod::get()->getSavedValue<int64_t>("playtime", 0);
+}
 
-    static void addSeconds(int64_t sec) {
-        Mod::get()->setSavedValue("accumulated-seconds", getAccumulatedSeconds() + sec);
-    }
+static void flush() {
+    if (g_start <= 0) return;
+    auto now = (int64_t)std::time(nullptr);
+    auto dt = now - g_start;
+    if (dt < 1) return;
+    Mod::get()->setSavedValue("playtime", getAccum() + dt);
+    g_start = now;
+}
 
-    static std::string formatDuration(int64_t total) {
-        int days = total / 86400;
-        int hours = (total % 86400) / 3600;
-        int minutes = (total % 3600) / 60;
-        int seconds = total % 60;
+static std::string pretty(int64_t sec) {
+    int d = sec / 86400;
+    int h = sec / 3600 % 24;
+    int m = sec / 60 % 60;
+    int s = sec % 60;
 
-        std::string result;
-        if(days) result += std::to_string(days) + "d ";
-        if(hours || days) result += std::to_string(hours) + "h ";
-        result += std::to_string(minutes) + "m " + std::to_string(seconds) + "s";
-        return result;
-    }
-};
+    std::string r;
+    if (d) r += std::to_string(d) + "d ";
+    if (d || h) r += std::to_string(h) + "h ";
+    r += std::to_string(m) + "m ";
+    r += std::to_string(s) + "s";
+    return r;
+}
 
-class SessionSaver : public CCNode {
-public:
-    bool init() {
-        if(!CCNode::init()) return false;
-        this->schedule(schedule_selector(SessionSaver::tick), 30.f);
+class Ticker : public CCNode {
+    bool init() override {
+        if (!CCNode::init()) return false;
+        schedule(schedule_selector(Ticker::tick), 25.f);
         return true;
     }
-
-    void tick(float) {
-        auto pl = PlayLayer::get();
-        if(!pl || s_sessionStart <= 0) return;
-        int64_t now = static_cast<int64_t>(std::time(nullptr));
-        int64_t diff = now - s_sessionStart;
-        if(diff > 0) {
-            TimeTracker::addSeconds(diff);
-            s_sessionStart = now;
-        }
-    }
-
-    static SessionSaver* create() {
-        auto saver = new SessionSaver();
-        if(saver && saver->init()) {
-            saver->autorelease();
-            return saver;
-        }
-        delete saver;
+    void tick(float) { flush(); }
+public:
+    static Ticker* make() {
+        auto t = new Ticker;
+        if (t && t->init()) { t->autorelease(); return t; }
+        CC_SAFE_DELETE(t);
         return nullptr;
     }
 };
 
 $on_mod(Loaded) {
-    s_sessionStart = static_cast<int64_t>(std::time(nullptr));
-    TimeTracker::getAccumulatedSeconds();
-    Mod::get()->setIcon("icon.png");
-    log::info("Screen Time ready");
+    g_start = (int64_t)std::time(nullptr);
 }
 
-class $modify(MyMenuLayer, MenuLayer) {
-public:
+class $modify(HookedMenu, MenuLayer) {
     bool init() {
-        if(!MenuLayer::init()) return false;
+        if (!MenuLayer::init()) return false;
 
-        auto menu = this->getChildByID("bottom-menu");
-        if(!menu) return true;
-
-        if(!this->getChildByID("screentime-saver"_spr)) {
-            auto saver = SessionSaver::create();
-            saver->setID("screentime-saver"_spr);
-            this->addChild(saver);
+        if (!getChildByID("ticker"_spr)) {
+            auto tk = Ticker::make();
+            tk->setID("ticker"_spr);
+            addChild(tk);
         }
 
-        auto spr = CircleButtonSprite::create(menu, CircleBaseColor::Green, CircleBaseSize::Medium);
-        spr->setString("T");
-        spr->setScale(0.8f);
+        auto menu = getChildByID("bottom-menu");
+        if (!menu) return true;
 
-        auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(MyMenuLayer::onTime));
-        btn->setID("time-button"_spr);
+        auto circle = CircleButtonSprite::create(
+            CCLabelBMFont::create("T", "bigFont.fnt"),
+            CircleBaseColor::Green,
+            CircleBaseSize::Medium
+        );
+        circle->setScale(.75f);
+
+        auto btn = CCMenuItemSpriteExtra::create(
+            circle, this,
+            menu_selector(HookedMenu::onTime)
+        );
+        btn->setID("playtime-btn"_spr);
         menu->addChild(btn);
         menu->updateLayout();
 
@@ -93,18 +84,14 @@ public:
     }
 
     void onTime(CCObject*) {
-        auto pl = PlayLayer::get();
-        if(!pl) {
-            FLAlertLayer::create("Screen Time", "Start a level to track playtime.", "OK")->show();
-            return;
-        }
-
-        int64_t total = TimeTracker::getAccumulatedSeconds();
-        if(s_sessionStart > 0) total += static_cast<int64_t>(std::time(nullptr)) - s_sessionStart;
+        flush();
+        auto t = getAccum();
+        if (g_start > 0)
+            t += (int64_t)std::time(nullptr) - g_start;
 
         FLAlertLayer::create(
             "Screen Time",
-            fmt::format("Playtime: {}", TimeTracker::formatDuration(total)).c_str(),
+            pretty(t).c_str(),
             "OK"
         )->show();
     }
