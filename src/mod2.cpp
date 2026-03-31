@@ -56,7 +56,7 @@ $on_mod(Loaded) {
     sess = (int64_t)std::time(0);
 }
 
-// Nom explicite pour la classe modifiée
+
 class $modify(MyMenuLayer, MenuLayer) {
     bool init() {
         if (!MenuLayer::init()) return false;
@@ -93,7 +93,7 @@ class $modify(MyMenuLayer, MenuLayer) {
             total += (int64_t)std::time(0) - sess;
         
         FLAlertLayer::create(
-            "Temps de jeu",
+            "play time / temps de jeu",
             pretty(total).c_str(),  
             "OK"
         )->show();
