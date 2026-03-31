@@ -3,9 +3,7 @@
 
 using namespace geode::prelude;
 
-
 static int64_t sess = 0;
-
 
 static int64_t load() {
     return Mod::get()->getSavedValue<int64_t>("pt", 0);
@@ -21,11 +19,10 @@ static void save() {
 }
 
 
-static std::string fmt(int64_t s) {
+static std::string pretty(int64_t s) {
     int h = s / 3600;
     int m = (s / 60) % 60;
     int sec = s % 60;
-    
     
     std::string r = "";
     if (h) r += std::to_string(h) + "h ";
@@ -48,7 +45,6 @@ public:
     
     bool init() {
         if (!CCNode::init()) return false;
-        
         schedule(schedule_selector(Tick::upd), 30.f);
         return true;
     }
@@ -60,10 +56,10 @@ $on_mod(Loaded) {
     sess = (int64_t)std::time(0);
 }
 
-class $modify(MenuLayer) {
+// Nom explicite pour la classe modifiée
+class $modify(MyMenuLayer, MenuLayer) {
     bool init() {
         if (!MenuLayer::init()) return false;
-        
         
         if (!getChildByID("t"_spr)) {
             auto tk = Tick::create();
@@ -74,7 +70,6 @@ class $modify(MenuLayer) {
         auto menu = getChildByID("bottom-menu");
         if (!menu) return true;
         
-        
         auto lbl = CCLabelBMFont::create("T", "bigFont.fnt");
         auto circ = CircleButtonSprite::create(
             lbl, CircleBaseColor::Green, CircleBaseSize::Medium
@@ -82,7 +77,7 @@ class $modify(MenuLayer) {
         circ->setScale(.8f);
         
         auto btn = CCMenuItemSpriteExtra::create(
-            circ, this, menu_selector(MenuLayer::onTime)
+            circ, this, menu_selector(MyMenuLayer::onTime)  
         );
         btn->setID("tbtn"_spr);
         menu->addChild(btn);
@@ -99,7 +94,7 @@ class $modify(MenuLayer) {
         
         FLAlertLayer::create(
             "Temps de jeu",
-            fmt(total).c_str(),
+            pretty(total).c_str(),  
             "OK"
         )->show();
     }
