@@ -6,7 +6,7 @@ static int64_t s_sessionStart = 0;
 
 class TimeTracker {
 public:
-    static int64_t getInstallTimeStamp() {
+    static int64_t getInstallTimestamp() {
         auto saved = Mod::get()->getSavedValue<int64_t>("install-time", 0);
         if (saved == 0) {
             saved = static_cast<int64_t>(std::time(nullptr));
@@ -20,8 +20,8 @@ public:
     }
 
     static void addSeconds(int64_t seconds) {
-        auto totalSeconds = getAccumulatedSeconds() + seconds;
-        Mod::get()->setSavedValue("accumulated-seconds", totalSeconds);
+        auto total = getAccumulatedSeconds() + seconds;
+        Mod::get()->setSavedValue("accumulated-seconds", total);
     }
 
     static std::string formatDuration(int64_t totalSeconds) {
@@ -29,7 +29,6 @@ public:
         int hours = (totalSeconds % 86400) / 3600;
         int minutes = (totalSeconds % 3600) / 60;
         int secs = totalSeconds % 60;
-
         std::string result;
         if (days > 0) {
             result += std::to_string(days) + "d ";
@@ -38,7 +37,7 @@ public:
             result += std::to_string(hours) + "h ";
         }
         result += std::to_string(minutes) + "m ";
-        result += std::to_string(secs) + "s ";
+        result += std::to_string(secs) + "s";
         return result;
     }
 
@@ -52,7 +51,7 @@ public:
 };
 
 $on_mod(Loaded) {
-    TimeTracker::getInstallTimeStamp();
+    TimeTracker::getInstallTimestamp();
     s_sessionStart = static_cast<int64_t>(std::time(nullptr));
     log::info("Screen Time loaded. Session started.");
 }
@@ -72,7 +71,7 @@ class SessionSaver : public CCNode {
 public:
     static SessionSaver* create() {
         auto ret = new SessionSaver();
-        if (ret && ret->init()) {
+        if (ret->init()) {
             ret->autorelease();
             return ret;
         }
@@ -102,10 +101,8 @@ protected:
     bool setup() override {
         this->setTitle("Screen Time");
         auto winSize = m_mainLayer->getContentSize();
-
-        auto installTime = TimeTracker::getInstallTimeStamp();
+        auto installTime = TimeTracker::getInstallTimestamp();
         auto accumulated = TimeTracker::getAccumulatedSeconds();
-
         int64_t currentExtra = 0;
         if (s_sessionStart > 0) {
             auto now = static_cast<int64_t>(std::time(nullptr));
@@ -122,7 +119,7 @@ protected:
             "bigFont.fnt"
         );
         installLabel->setScale(0.35f);
-        installLabel->setPosition(winSize / 2 + ccp(0, 5));
+        installLabel->setPosition(winSize / 2 + ccp(0, 20));
         m_mainLayer->addChild(installLabel);
 
         auto playtimeLabel = CCLabelBMFont::create(
@@ -130,12 +127,12 @@ protected:
             "bigFont.fnt"
         );
         playtimeLabel->setScale(0.35f);
-        playtimeLabel->setPosition(winSize / 2 + ccp(0, -5));
+        playtimeLabel->setPosition(winSize / 2 + ccp(0, 0));
         m_mainLayer->addChild(playtimeLabel);
 
         auto sinceInstallLabel = CCLabelBMFont::create(
             fmt::format("Time since install: {}",
-                TimeTracker::formatDuration(timeSinceInstall)).c_str(),
+            TimeTracker::formatDuration(timeSinceInstall)).c_str(),
             "bigFont.fnt"
         );
         sinceInstallLabel->setScale(0.35f);
@@ -148,7 +145,7 @@ protected:
 public:
     static TimePopup* create() {
         auto ret = new TimePopup();
-        if (ret && ret->initAnchored(300.f, 200.f)) {
+        if (ret->initAnchored(300.f, 200.f)) {
             ret->autorelease();
             return ret;
         }
@@ -160,7 +157,6 @@ public:
 class $modify(MyMenuLayer, MenuLayer) {
     bool init() {
         if (!MenuLayer::init()) return false;
-
         if (!this->getChildByID("screentime-saver"_spr)) {
             auto saver = SessionSaver::create();
             saver->setID("screentime-saver"_spr);
@@ -178,7 +174,6 @@ class $modify(MyMenuLayer, MenuLayer) {
             CircleBaseColor::Green,
             CircleBaseSize::Medium
         );
-
         if (auto label = sprite->getChildByType<CCLabelBMFont>(0)) {
             label->setScale(0.4f);
         }
@@ -188,11 +183,9 @@ class $modify(MyMenuLayer, MenuLayer) {
             this,
             menu_selector(MyMenuLayer::onTimeButton)
         );
-
         btn->setID("time-button"_spr);
         bottomMenu->addChild(btn);
         bottomMenu->updateLayout();
-
         return true;
     }
 
