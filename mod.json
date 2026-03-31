@@ -7,5 +7,5 @@
   "version": "v1.0.0",
   "developer": "LiminalStudio",
   "description": "Tracks how long you have been playing. Simple and lightweight.",
-  "icon": ["ressources/icon.png"]
+  "icon": ["logo.png"]
 }
