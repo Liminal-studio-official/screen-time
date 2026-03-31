@@ -3,99 +3,103 @@
 
 using namespace geode::prelude;
 
-static int64_t g_sess = 0;
 
-static int64_t stored() {
-    return Mod::get()->getSavedValue<int64_t>("playtime", 0);
+static int64_t sess = 0;
+
+
+static int64_t load() {
+    return Mod::get()->getSavedValue<int64_t>("pt", 0);
 }
 
-static void flush() {
-    if (g_sess < 1) return;
-    int64_t n = (int64_t)std::time(nullptr);
-    int64_t d = n - g_sess;
-    if (d < 1) return;
-    Mod::get()->setSavedValue("playtime", stored() + d);
-    g_sess = n;
+static void save() {
+    if (!sess) return;
+    auto now = (int64_t)std::time(0);
+    auto dt = now - sess;
+    if (dt < 1) return;
+    Mod::get()->setSavedValue("pt", load() + dt);
+    sess = now;
 }
 
-static std::string pretty(int64_t sec) {
-    int y = sec / 31536000;
-    int d = (sec / 86400) % 365;
-    int h = (sec / 3600) % 24;
-    int m = (sec / 60) % 60;
-    int s = sec % 60;
 
-    std::string out;
-    if (y) out += std::to_string(y) + "y ";
-    if (y || d) out += std::to_string(d) + "d ";
-    if (y || d || h) out += std::to_string(h) + "h ";
-    out += std::to_string(m) + "m " + std::to_string(s) + "s";
-    return out;
+static std::string fmt(int64_t s) {
+    int h = s / 3600;
+    int m = (s / 60) % 60;
+    int sec = s % 60;
+    
+    
+    std::string r = "";
+    if (h) r += std::to_string(h) + "h ";
+    r += std::to_string(m) + "m ";
+    r += std::to_string(sec) + "s";
+    return r;
 }
 
-class Ticker : public CCNode {
-    void onTick(float) { flush(); }
-
-    bool init() override {
-        if (!CCNode::init()) return false;
-        schedule(schedule_selector(Ticker::onTick), 20.f);
-        return true;
-    }
+class Tick : public CCNode {
 public:
-    static Ticker* make() {
-        auto r = new Ticker;
-        if (r && r->init()) { r->autorelease(); return r; }
-        CC_SAFE_DELETE(r);
+    static Tick* create() {
+        auto t = new Tick;
+        if (t && t->init()) {
+            t->autorelease();
+            return t;
+        }
+        delete t;
         return nullptr;
     }
+    
+    bool init() {
+        if (!CCNode::init()) return false;
+        
+        schedule(schedule_selector(Tick::upd), 30.f);
+        return true;
+    }
+    
+    void upd(float) { save(); }
 };
 
 $on_mod(Loaded) {
-    g_sess = (int64_t)std::time(nullptr);
+    sess = (int64_t)std::time(0);
 }
 
-class $modify(MyMenu, MenuLayer) {
+class $modify(MenuLayer) {
     bool init() {
         if (!MenuLayer::init()) return false;
-
-        if (!getChildByID("tk"_spr)) {
-            auto t = Ticker::make();
-            t->setID("tk"_spr);
-            addChild(t);
+        
+        
+        if (!getChildByID("t"_spr)) {
+            auto tk = Tick::create();
+            tk->setID("t"_spr);
+            addChild(tk);
         }
-
-        auto btm = getChildByID("bottom-menu");
-        if (!btm) return true;
-
+        
+        auto menu = getChildByID("bottom-menu");
+        if (!menu) return true;
+        
+        
         auto lbl = CCLabelBMFont::create("T", "bigFont.fnt");
-        lbl->setScale(.55f);
-
-        auto circle = CircleButtonSprite::create(lbl, CircleBaseColor::Green, CircleBaseSize::Medium);
-
-        if (auto ref = btm->getChildByID("settings-button")) {
-            float sc = ref->getScale();
-            circle->setScale(sc);
-        }
-
-        auto btn = CCMenuItemSpriteExtra::create(
-            circle, this, menu_selector(MyMenu::showTime)
+        auto circ = CircleButtonSprite::create(
+            lbl, CircleBaseColor::Green, CircleBaseSize::Medium
         );
-        btn->setID("st-btn"_spr);
-        btm->addChild(btn);
-        btm->updateLayout();
-
+        circ->setScale(.8f);
+        
+        auto btn = CCMenuItemSpriteExtra::create(
+            circ, this, menu_selector(MenuLayer::onTime)
+        );
+        btn->setID("tbtn"_spr);
+        menu->addChild(btn);
+        menu->updateLayout();
+        
         return true;
     }
-
-    void showTime(CCObject*) {
-        flush();
-        int64_t tot = stored();
-        if (g_sess > 0)
-            tot += (int64_t)std::time(nullptr) - g_sess;
-
+    
+    void onTime(CCObject*) {
+        save();
+        auto total = load();
+        if (sess > 0)
+            total += (int64_t)std::time(0) - sess;
+        
         FLAlertLayer::create(
-            "Screen Time",
-            pretty(tot).c_str(),
+            "Temps de jeu",
+            fmt(total).c_str(),
             "OK"
         )->show();
     }
