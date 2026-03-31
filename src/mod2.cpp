@@ -1,13 +1,12 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-#include <Geode/modify/GameManager.hpp>
+#include <Geode/modify/PlayLayer.hpp>
 using namespace geode::prelude;
 
 static int64_t s_sessionStart = 0;
 
 bool inLevel() {
-    auto gm = GameManager::sharedState();
-    return gm && gm->getPlayingLevel() != nullptr;
+    return PlayLayer::get() != nullptr;
 }
 
 class TimeTracker {
@@ -47,7 +46,8 @@ class $modify(MyMenuLayer,MenuLayer){
         if(!menu) return true;
 
         auto tex=CCTextureCache::sharedTextureCache()->addImage("icon.png", false);
-        auto spr=CircleButtonSprite::createWithTexture(tex, CircleBaseSize::Medium);
+        auto spr=CircleButtonSprite::createWithTexture(tex);
+        spr->setContentSize(CCSize(50,50)); // taille comme les autres boutons
 
         auto btn=CCMenuItemSpriteExtra::create(spr,this,menu_selector(MyMenuLayer::onTime));
         btn->setID("time-button"_spr);
