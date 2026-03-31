@@ -74,7 +74,7 @@ class $modify(MyMenuLayer, MenuLayer) {
         auto circ = CircleButtonSprite::create(
             lbl, CircleBaseColor::Green, CircleBaseSize::Medium
         );
-        circ->setScale(.16f);
+        circ->setScale(1.0f);
         
         auto btn = CCMenuItemSpriteExtra::create(
             circ, this, menu_selector(MyMenuLayer::onTime)  
