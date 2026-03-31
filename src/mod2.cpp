@@ -12,20 +12,20 @@ public:
     }
 
     static void addSeconds(int64_t sec) {
-        int64_t nowValue = getAccumulatedSeconds();
-        Mod::get()->setSavedValue("accumulated-seconds", nowValue + sec);
+        Mod::get()->setSavedValue("accumulated-seconds", getAccumulatedSeconds() + sec);
     }
 
-    static std::string formatDuration(int64_t t) {
-        int d = t / 86400;
-        int h = (t % 86400) / 3600;
-        int m = (t % 3600) / 60;
-        int s = t % 60;
-        std::string out;
-        if(d) out += std::to_string(d) + "d ";
-        if(h || d) out += std::to_string(h) + "h ";
-        out += std::to_string(m) + "m " + std::to_string(s) + "s";
-        return out;
+    static std::string formatDuration(int64_t total) {
+        int days = total / 86400;
+        int hours = (total % 86400) / 3600;
+        int minutes = (total % 3600) / 60;
+        int seconds = total % 60;
+
+        std::string result;
+        if(days) result += std::to_string(days) + "d ";
+        if(hours || days) result += std::to_string(hours) + "h ";
+        result += std::to_string(minutes) + "m " + std::to_string(seconds) + "s";
+        return result;
     }
 };
 
@@ -40,9 +40,8 @@ public:
     void tick(float) {
         auto pl = PlayLayer::get();
         if(!pl || s_sessionStart <= 0) return;
-
-        auto now = static_cast<int64_t>(std::time(nullptr));
-        auto diff = now - s_sessionStart;
+        int64_t now = static_cast<int64_t>(std::time(nullptr));
+        int64_t diff = now - s_sessionStart;
         if(diff > 0) {
             TimeTracker::addSeconds(diff);
             s_sessionStart = now;
@@ -50,20 +49,25 @@ public:
     }
 
     static SessionSaver* create() {
-        auto s = new SessionSaver();
-        if(s && s->init()) { s->autorelease(); return s; }
-        delete s;
+        auto saver = new SessionSaver();
+        if(saver && saver->init()) {
+            saver->autorelease();
+            return saver;
+        }
+        delete saver;
         return nullptr;
     }
 };
 
-$on_mod(Loaded){
+$on_mod(Loaded) {
     s_sessionStart = static_cast<int64_t>(std::time(nullptr));
     TimeTracker::getAccumulatedSeconds();
+    Mod::get()->setIcon("icon.png");
     log::info("Screen Time ready");
 }
 
 class $modify(MyMenuLayer, MenuLayer) {
+public:
     bool init() {
         if(!MenuLayer::init()) return false;
 
@@ -76,12 +80,9 @@ class $modify(MyMenuLayer, MenuLayer) {
             this->addChild(saver);
         }
 
-        auto tex = CCTextureCache::sharedTextureCache()->addImage("icon.png", false);
-        if(!tex) return true;
-
         auto spr = CircleButtonSprite::create(menu, CircleBaseColor::Green, CircleBaseSize::Medium);
-        spr->setTexture(tex);
-        spr->setScale(0.7f);
+        spr->setString("T");
+        spr->setScale(0.8f);
 
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(MyMenuLayer::onTime));
         btn->setID("time-button"_spr);
@@ -94,16 +95,16 @@ class $modify(MyMenuLayer, MenuLayer) {
     void onTime(CCObject*) {
         auto pl = PlayLayer::get();
         if(!pl) {
-            FLAlertLayer::create("Screen Time","Start a level to track playtime.","OK")->show();
+            FLAlertLayer::create("Screen Time", "Start a level to track playtime.", "OK")->show();
             return;
         }
 
-        auto t = TimeTracker::getAccumulatedSeconds();
-        if(s_sessionStart > 0) t += static_cast<int64_t>(std::time(nullptr)) - s_sessionStart;
+        int64_t total = TimeTracker::getAccumulatedSeconds();
+        if(s_sessionStart > 0) total += static_cast<int64_t>(std::time(nullptr)) - s_sessionStart;
 
         FLAlertLayer::create(
             "Screen Time",
-            fmt::format("Playtime: {}", TimeTracker::formatDuration(t)).c_str(),
+            fmt::format("Playtime: {}", TimeTracker::formatDuration(total)).c_str(),
             "OK"
         )->show();
     }
