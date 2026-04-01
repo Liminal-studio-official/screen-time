@@ -1,101 +1,182 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
+#include <Geode/modify/PlayLayer.hpp>
+#include <Geode/ui/Notification.hpp>
+#include <fmod.hpp>
 
 using namespace geode::prelude;
 
-static int64_t sess = 0;
+static constexpr const char* LOFI_STREAM_URL = "https://usa9.fastcast4u.com/proxy/jamz?mp=/1";
 
-static int64_t load() {
-    return Mod::get()->getSavedValue<int64_t>("pt", 0);
-}
+static bool g_lastSettingState = false;
+static FMOD::System* g_fmodSystem = nullptr;
+static FMOD::Sound* g_streamSound = nullptr;
+static FMOD::Channel* g_streamChannel = nullptr;
+static bool g_isPlaying = false;
 
-static void save() {
-    if (!sess) return;
-    auto now = (int64_t)std::time(0);
-    auto dt = now - sess;
-    if (dt < 1) return;
-    Mod::get()->setSavedValue("pt", load() + dt);
-    sess = now;
-}
-
-
-static std::string pretty(int64_t s) {
-    int h = s / 3600;
-    int m = (s / 60) % 60;
-    int sec = s % 60;
-    
-    std::string r = "";
-    if (h) r += std::to_string(h) + "h ";
-    r += std::to_string(m) + "m ";
-    r += std::to_string(sec) + "s";
-    return r;
-}
-
-class Tick : public CCNode {
+class LofiStreamManager {
 public:
-    static Tick* create() {
-        auto t = new Tick;
-        if (t && t->init()) {
-            t->autorelease();
-            return t;
+    static bool initSystem() {
+        if (g_fmodSystem) return true;
+
+        FMOD_RESULT result = FMOD::System_Create(&g_fmodSystem);
+        if (result != FMOD_OK || !g_fmodSystem) {
+            log::error("Failed to create FMOD system");
+            return false;
         }
-        delete t;
-        return nullptr;
-    }
-    
-    bool init() {
-        if (!CCNode::init()) return false;
-        schedule(schedule_selector(Tick::upd), 30.f);
+
+        result = g_fmodSystem->init(32, FMOD_INIT_NORMAL, nullptr);
+        if (result != FMOD_OK) {
+            log::error("Failed to init FMOD system");
+            g_fmodSystem->release();
+            g_fmodSystem = nullptr;
+            return false;
+        }
+
         return true;
     }
-    
-    void upd(float) { save(); }
+
+    static void start() {
+        if (g_isPlaying) return;
+        if (!initSystem()) return;
+
+        if (g_streamSound) {
+            g_streamSound->release();
+            g_streamSound = nullptr;
+        }
+
+        FMOD_RESULT result = g_fmodSystem->createStream(
+            LOFI_STREAM_URL,
+            FMOD_CREATESTREAM | FMOD_NONBLOCKING,
+            nullptr,
+            &g_streamSound
+        );
+
+        if (result != FMOD_OK || !g_streamSound) {
+            log::error("Failed to create stream from URL");
+            Notification::create(
+                "Failed to start lofi stream.",
+                NotificationIcon::Error,
+                3.0f
+            )->show();
+            return;
+        }
+
+        result = g_fmodSystem->playSound(g_streamSound, nullptr, false, &g_streamChannel);
+        if (result != FMOD_OK) {
+            log::error("Failed to play stream");
+            Notification::create(
+                "Failed to play lofi stream.",
+                NotificationIcon::Error,
+                3.0f
+            )->show();
+            return;
+        }
+
+        g_isPlaying = true;
+    }
+
+    static void stop() {
+        if (g_streamChannel) {
+            g_streamChannel->stop();
+            g_streamChannel = nullptr;
+        }
+
+        if (g_streamSound) {
+            g_streamSound->release();
+            g_streamSound = nullptr;
+        }
+
+        g_isPlaying = false;
+    }
+
+    static void update() {
+        if (g_fmodSystem) {
+            g_fmodSystem->update();
+        }
+
+        if (g_isPlaying && g_streamChannel) {
+            bool isPlaying = false;
+            FMOD_RESULT result = g_streamChannel->isPlaying(&isPlaying);
+            if (result != FMOD_OK || !isPlaying) {
+                g_isPlaying = false;
+                g_streamChannel = nullptr;
+            }
+        }
+    }
+
+    static void refresh() {
+        bool enabled = Mod::get()->getSettingValue<bool>("active-mods");
+
+        if (enabled && !g_isPlaying) {
+            start();
+            if (g_isPlaying) {
+                Notification::create(
+                    "Lofi stream enabled. Chill radio is now playing.",
+                    NotificationIcon::Info,
+                    4.0f
+                )->show();
+            }
+        }
+        else if (!enabled && g_isPlaying) {
+            stop();
+            Notification::create(
+                "Lofi stream disabled.",
+                NotificationIcon::Info,
+                3.0f
+            )->show();
+        }
+
+        g_lastSettingState = enabled;
+    }
+
+    static void cleanup() {
+        stop();
+        if (g_fmodSystem) {
+            g_fmodSystem->close();
+            g_fmodSystem->release();
+            g_fmodSystem = nullptr;
+        }
+    }
 };
 
-$on_mod(Loaded) {
-    sess = (int64_t)std::time(0);
-}
-
-
-class $modify(MyMenuLayer, MenuLayer) {
+struct MyMenuLayer : Modify<MyMenuLayer, MenuLayer> {
     bool init() {
         if (!MenuLayer::init()) return false;
-        
-        if (!getChildByID("t"_spr)) {
-            auto tk = Tick::create();
-            tk->setID("t"_spr);
-            addChild(tk);
-        }
-        
-        auto menu = getChildByID("bottom-menu");
-        if (!menu) return true;
-        
-        auto lbl = CCLabelBMFont::create("T", "bigFont.fnt");
-        auto circ = CircleButtonSprite::create(
-            lbl, CircleBaseColor::Green, CircleBaseSize::Medium
-        );
-        circ->setScale(1.1f);
-        
-        auto btn = CCMenuItemSpriteExtra::create(
-            circ, this, menu_selector(MyMenuLayer::onTime)  
-        );
-        btn->setID("tbtn"_spr);
-        menu->addChild(btn);
-        menu->updateLayout();
-        
+
+        g_lastSettingState = Mod::get()->getSettingValue<bool>("active-mods");
+        this->schedule(schedule_selector(MyMenuLayer::checkSetting), 0.25f);
+        this->schedule(schedule_selector(MyMenuLayer::updateFmod), 0.05f);
+
+        LofiStreamManager::refresh();
         return true;
     }
-    
-    void onTime(CCObject*) {
-        save();
-        auto total = load();
-        if (sess > 0)
-            total += (int64_t)std::time(0) - sess;
-        
-        FLAlertLayer::create(
-            "play time",
-            pretty(total).c_str(),  
-            "OK"
-        )->show();
+
+    void checkSetting(float dt) {
+        bool enabled = Mod::get()->getSettingValue<bool>("active-mods");
+        if (enabled != g_lastSettingState) {
+            LofiStreamManager::refresh();
+        }
+    }
+
+    void updateFmod(float dt) {
+        LofiStreamManager::update();
+    }
+};
+
+struct MyPlayLayer : Modify<MyPlayLayer, PlayLayer> {
+    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
+        if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
+
+        if (Mod::get()->getSettingValue<bool>("active-mods")) {
+            LofiStreamManager::start();
+        }
+
+        this->schedule(schedule_selector(MyPlayLayer::updateFmod), 0.05f);
+        return true;
+    }
+
+    void updateFmod(float dt) {
+        LofiStreamManager::update();
     }
 };
